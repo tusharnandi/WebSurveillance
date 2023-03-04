@@ -1,0 +1,74 @@
+﻿@page
+@model VideoApp.Pages.PlayerModel
+@{
+    ViewData["Title"] = "Player Page";
+}
+<h4>@ViewData["Title"]</h4>
+<form> 
+    <div class="row">    
+        <label id="message" class="infoMessage"> </label>  
+    </div>  
+    <div class="row">    
+        <label id="error" class="errorMessage"> </label>  
+    </div>  
+    <div >    
+        <button type="button" onclick="getVideoFileList();">Get Video List</button>      
+    </div>
+
+    <div>
+        <video class="w-100" style="max-width: 800px;" controls="controls">
+            <source src="@Model.StreamServerURL/api/StreamReader/0" type="video/mp4">
+        </video>
+    </div>
+    
+</form>
+
+
+<script>          
+    'use strict';
+    const getVideoFileURL = "@Model.StreamServerURL/api/StreamReader";
+    
+    function getVideoFileList() {     
+        let req = new XMLHttpRequest();    
+    
+        displayMessage("Sending request...");
+        console.log("Sending request...");   
+        req.open("GET", getVideoFileURL);    
+        req.send(); 
+        displayMessage("Sending request...Sent out.");
+        console.log("Sending request...Sent out.");   
+
+        req.onreadystatechange = function () {      
+            if (this.readyState===XMLHttpRequest.DONE && this.status === 200) {        
+                //console.log(this.response);        
+                displayMessage("Response Retrieved: " + this.response);  
+                //displayResponse(this.response);
+            }
+            else{
+                displayResponse(this);
+            }
+        }; 
+        
+    }//End Get
+
+
+
+    function displayMessage(msg) {
+        document.getElementById("message").innerHTML = msg;
+    }
+    function displayError(error) {
+        document.getElementById("error").innerHTML = JSON.stringify(error);
+    }
+    function displayResponse(resp) {  
+        //console.log(resp);  
+        console.log("readyState: "+ resp.readyState);  
+        //console.log("responseText: " + resp.responseText);  
+        console.log("status: " + resp.status.toString());  
+        console.log("statusTest: " + resp.statusText);
+    }
+
+    function getValue(id) {  return document.getElementById(id).value;}
+    function setValue(id, value) {  document.getElementById(id).value = value;}
+
+
+</script>
