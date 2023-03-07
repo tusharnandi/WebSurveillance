@@ -1,0 +1,105 @@
+﻿@page
+@model VideoApp.Pages.LiveViewModel
+@{
+    ViewData["Title"] = "Live Streaming";
+}
+
+
+<style>
+	#st-video {
+	  position: relative;
+	  width: 100%;
+	  height: 100%;
+	}
+</style>
+<div>Work in progress...</div>
+<video id="st-video" autoplay controls></video>
+
+<script>
+
+	const mediaPlayer = document.querySelector("#st-video");
+
+	const assetURL = 'frag_bunny.mp4';
+	const mimeCodec = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
+	
+	//const assetURL = "sample.webm";
+	//const mimeCodec = 'video/webm; codecs="vp9"';
+	
+	let mediaSource;
+
+	if ("MediaSource" in window && MediaSource.isTypeSupported(mimeCodec)) {
+		mediaSource = new MediaSource;
+		//console.log(mediaSource.readyState); // closed
+		mediaPlayer.src = URL.createObjectURL(mediaSource);
+		mediaSource.addEventListener("sourceopen", sourceOpen,{ once: true });
+	} else {
+		console.error("Unsupported MIME type or codec: ", mimeCodec);
+	}
+
+	function sourceOpen() 
+	{
+		console.log("mediaSource.readyState" + this.readyState); // open
+	
+		const sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);  //'video/webm; codecs="vp9"';
+				
+		fetchAB(assetURL, (buf) => {
+
+			sourceBuffer.addEventListener("updateend", () => {
+				console.log("mediaSource State 1: " + mediaSource.readyState); // open
+				console.log("sourceBuffer.updating: " + sourceBuffer.updating);
+
+				if (mediaSource.readyState === 'open') {
+					//!sourceBuffer.updating && 
+					
+					 console.log("mediaSource.endOfStream calling...");
+
+					mediaSource.endOfStream();
+					//mediaPlayer.play();
+				}
+				
+				 //mediaPlayer.addEventListener('canplay', function () 
+				 // {
+					//  console.log("mediaPlayer.canplay");
+
+
+					//mediaPlayer.play();
+				 // });
+
+				console.log("mediaSource State 2 : " + mediaSource.readyState); // ended
+			});
+
+			sourceBuffer.appendBuffer(buf);
+
+
+		  });
+	}
+
+	function fetchAB(url, cb) {
+		console.log(url);
+		const xhr = new XMLHttpRequest();
+		xhr.open("get", url);
+		xhr.responseType = "arraybuffer";
+		xhr.onload = () => {
+			cb(xhr.response);
+		};
+		xhr.send();
+	}
+
+	//const constraints = {audio: true, video: true}
+	//navigator.mediaDevices.getUserMedia(constraints)
+	//	.then(function(stream) {
+	//	   // stream is of MediaStream type
+	//	   let newStream = new MediaStream();
+
+	//	   // getTracks method returns an array of all stream inputs
+	//	   // within a MediaStream object, in this case we have
+	//	   // two tracks, an audio and a video track
+	//	   stream.getTracks().forEach(track => newStream.addTrack(track));
+
+	//	   // now play stream locally, or stream it with RTCPeerConnection or Peerjs
+	//	   mediaPlayer.srcObject = newStream;
+	//	});
+
+
+
+</script>

@@ -58,14 +58,32 @@
     let lock_data;
     let approval=false;
     let identical_count=0;
-	let ROTATE_MAX=10;
+	let ROTATE_MAX=12*2;
 	let ROTATE_AUTOMATION=false;
 
 	$(".start-camera").click(async function () {
 	
 		try {
+			//const videoConstraints = {
+			//	deviceId: { exact: selected_camera.id }
+			//};
+
 			const videoConstraints = {
-				deviceId: { exact: selected_camera.id }
+			  video: {
+				width: {
+				  min: 1280,
+				  ideal: 1920,
+				  max: 2560,
+				},
+				height: {
+				  min: 720,
+				  ideal: 1080,
+				  max: 1440
+				},
+				facingMode: {
+				  exact: 'environment'
+				}
+			  }
 			};
 			camera_stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: true });
 
@@ -88,7 +106,13 @@
 
 	$(".start-record").click(async function () {
 
-		media_recorder = new MediaRecorder(camera_stream, { mimeType: 'video/webm' });
+
+
+		const options = { 
+			mimeType: 'video/webm;codecs=vp9,opus' 
+		}
+
+		media_recorder = new MediaRecorder(camera_stream, options);
 
 		media_recorder.addEventListener('dataavailable', function (e) {
 			data_sequence++;
@@ -123,7 +147,7 @@
 			$(".stop-record").show();
 
 		});
-		media_recorder.start(2 * 1000);
+		media_recorder.start(5 * 1000);
 
 	});
 
@@ -330,21 +354,37 @@
             if (cameraList.length == 1) {
                 selected_camera = cameraList[0];
             }
+			else if(cameraList.length >1)
+			{
+				selected_camera = cameraList[cameraList.length -1];
+			}
             if (micList.length == 1) {
                 selected_mic = micList[0];
             }
         }
     }
 
-    $(document).ready(async function () {
-		
-        $(".logclean").hide();
+  async function init(){
 
-		$(".start-camera").show();
+		$(".logclean").show();
+
+		$(".start-camera").hide();
 		$(".start-record").hide();
 		$(".stop-record").hide();
-       await getDevices();
 
-        console.log(selected_camera);
+		if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
+			log("mediaDevices supported!...Requesting User Permission ");
+			navigator.mediaDevices.getUserMedia({video: true, audio:true});
+
+
+			$(".start-camera").show();
+			await getDevices();
+
+       		log("selected camera: "+ selected_camera.label);
+		}
+  }
+
+    $(document).ready(async function () {
+	    await init();
     });
 </script>

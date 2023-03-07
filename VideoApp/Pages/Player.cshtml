@@ -3,72 +3,164 @@
 @{
     ViewData["Title"] = "Player Page";
 }
-<h4>@ViewData["Title"]</h4>
-<form> 
-    <div class="row">    
-        <label id="message" class="infoMessage"> </label>  
-    </div>  
-    <div class="row">    
-        <label id="error" class="errorMessage"> </label>  
-    </div>  
-    <div >    
-        <button type="button" onclick="getVideoFileList();">Get Video List</button>      
-    </div>
-
-    <div>
-        <video class="w-100" style="max-width: 800px;" controls="controls">
-            <source src="@Model.StreamServerURL/api/StreamReader/0" type="video/mp4">
+<div class="row" >
+    <div class="col-8" style="height:600px">
+        <!--Video-->
+        <video id="my-video" width="100%" height="100%" controls="controls" autoplay>
+            <source />
+            <p>
+                Your browser doesn't support HTML video. Here is a
+                <a href="myVideo.mp4">link to the video</a> instead.
+            </p>
         </video>
     </div>
-    
-</form>
+    <div class="col-4">
+        <div class="card">
+            <div class="card-body">
+                <button type="button" class="btn btn-primary archived-button">Archived</button>
+                <button type="button" class="btn btn-primary refreshlist">Refresh</button>
 
+                <button type="button" class="btn btn-secondary close logclean" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>Clean
+                </button>
+                <a class="btn btn-info" href="/">Home</a>
+                <h6 class="card-title">Listing</h6>
+                <div class="rclist overflow-auto" style="max-height: 200px;"></div>
+                <div class="log overflow-auto" style="max-height: 200px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>          
     'use strict';
-    const getVideoFileURL = "@Model.StreamServerURL/api/StreamReader";
-    
-    function getVideoFileList() {     
-        let req = new XMLHttpRequest();    
-    
-        displayMessage("Sending request...");
-        console.log("Sending request...");   
-        req.open("GET", getVideoFileURL);    
-        req.send(); 
-        displayMessage("Sending request...Sent out.");
-        console.log("Sending request...Sent out.");   
+    const streamUrl = "@Model.StreamServerURL/api/StreamReader";  //StreamReader
 
-        req.onreadystatechange = function () {      
-            if (this.readyState===XMLHttpRequest.DONE && this.status === 200) {        
-                //console.log(this.response);        
-                displayMessage("Response Retrieved: " + this.response);  
-                //displayResponse(this.response);
-            }
-            else{
-                displayResponse(this);
-            }
-        }; 
+    const streamHostUrl = "https://eyeapi.azurewebsites.net";  //Base URL
+    let seq=0;
+    const video = document.querySelector("#my-video");
+
+
+function playRecording(vid) {
+        log("Playing...videoId: "+ vid,seq++);
+
+        let assetURL = `https://obc.azurewebsites.net/Play?f=${vid}`;
+        window.location.replace(assetURL);
+}
+
+
+//Video FileList
+function GetRecordingList() {
+    seq++;
+        let getUrl = `${streamUrl}`;
+
+    log(`Requesting[${seq}]...`, seq);
+    
+    $.ajax({
+            type: "GET",
+            url: getUrl,
+            //data: { userId: Id },
+            contentType: "application/json;charset=utf-8",
+            dataType: "json",
+        success: function (result) {
+                //console.log('resp:', $(result).length);
+                log(`Requesting[${seq}]...done`, seq);
+
+                if (!$.trim(result)) {
+                    $(".rclist").empty();
+                    log(`Requesting[${seq}]...done...empty`, seq);
+                    
+                }
+                else{
+                    $(".rclist").empty();
+                    $.each(result, function (key, val) { 
+                        var text = key + ") " + val.substring(val.length - 26);
+                        $(".rclist").append(`<div id="${key}" class="row"><div class="col-12 text-truncate" onclick="playRecording('${val}');" da="${val}" >${text}</div></div>`);
+                    }); 
+                }   
+        },
+        error: function (response) {
+                //console.log('Error:', JSON.stringify(error));
+                log(`Requesting[${seq}]...error:${error}`, seq);
+        }
+    });
+
+}
+
+$(".refreshlist").click(function(){
+    GetRecordingList();
+});
+
+    $(".archived-button").click(function () {
+    ArchiveFiles("processed");
+});
+
+    function ArchiveFiles(path,postdata) {
+
+        log(`Archiving...`);
+
+        //POST: VideoFileManagement/ArchivedAsync?path=processed
+
+        let queryString = `path=${path}`;
+        let svrurl = `${streamHostUrl}/api/VideoFileManagement/ArchivedAsync?${queryString}`;
+
+        fetch(svrurl, {
+            method: "POST",
+            body: postdata
+            })
+            .then((response) => {
+                console.log('Response:', JSON.stringify(response));
+                log(`Recevied response.`);
+                return response.json();
+            })
+            .then((result) => {
+                console.log('Success:', result);
+                log(`Archiving...done`);
+
+                log("Refeshing listing...");
+                GetRecordingList();
         
-    }//End Get
 
+            })
+            .catch((error) => {
+                //console.log('Error:', JSON.stringify(error));
+                log(`Archiving...error:${error}`);
+            })
+            ;
+}
+$(".logclean").click(function(){
+    
+    $(".log").empty();
 
+});
+function log(message,id=0) {
+    //console.log(message);
+    if(id>0){
 
-    function displayMessage(msg) {
-        document.getElementById("message").innerHTML = msg;
+        //clear log for each 100 request
+        if(!(id%50)){
+            $(".log").empty();
+        }
+
+        if($(".log").find(`#${id}`).length){
+
+                //console.log("div found");
+            $(".log").find(`#${id}`).text(message);
+        }
+        else{
+
+            $(".log").append(`<div id="${id}">${message}</div>`);
+        }
+            
     }
-    function displayError(error) {
-        document.getElementById("error").innerHTML = JSON.stringify(error);
+    else{
+            $(".log").append(`<div>${message}</div>`);
     }
-    function displayResponse(resp) {  
-        //console.log(resp);  
-        console.log("readyState: "+ resp.readyState);  
-        //console.log("responseText: " + resp.responseText);  
-        console.log("status: " + resp.status.toString());  
-        console.log("statusTest: " + resp.statusText);
-    }
+    
+}
 
-    function getValue(id) {  return document.getElementById(id).value;}
-    function setValue(id, value) {  document.getElementById(id).value = value;}
-
-
+$(document).ready(function () {
+        GetRecordingList();
+        log("System Ready!");
+    });
 </script>
