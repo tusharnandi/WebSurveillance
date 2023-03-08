@@ -58,7 +58,7 @@
     let lock_data;
     let approval=false;
     let identical_count=0;
-	let ROTATE_MAX=12*2;
+	let ROTATE_MAX=30*10; // 10 minutes
 	let ROTATE_AUTOMATION=false;
 
 	$(".start-camera").click(async function () {
@@ -85,7 +85,7 @@
 				}
 			  }
 			};
-			camera_stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: true });
+			camera_stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
 
 			st_video.srcObject = camera_stream;
 			$(".start-camera").hide();
@@ -147,7 +147,7 @@
 			$(".stop-record").show();
 
 		});
-		media_recorder.start(5 * 1000);
+		media_recorder.start(2 * 1000);
 
 	});
 

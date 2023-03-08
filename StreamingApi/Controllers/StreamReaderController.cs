@@ -1,5 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
+using System.Net.Http.Headers;
+//using System.Web.Http;
+//using StreamingApi.Services;
 
 namespace StreamingApi.Controllers
 {
@@ -43,18 +47,36 @@ namespace StreamingApi.Controllers
             return fileList;
         }
 
-        [HttpGet("{id}")]
-        public IActionResult Get(int id)
+        [HttpGet("file/{id}")]
+        public IActionResult Get(string id)
         {
-            string file = fileList[id];
-            logger.LogInformation($"Start Get({id})");
-            //string fileName = "big_buck_bunny_720p_30mb.mp4";
-           // string absPath = HostingEnvironment.MapPath(virtualDirectoryPath);
+            string filename = $"Recording-{id}.webm";
+            int duration = 60;
+            int maxSequence = 5;
+            logger.LogInformation($"Start Get(filename:{filename})");
 
+            string filefullpath = Path.Combine(ContentRootPath,videofolder, filename);
 
-            string filefullpath = Path.Combine(ContentRootPath,videofolder, file);
-            return PhysicalFile(filefullpath, "video/webm", file, enableRangeProcessing: true);
+            HttpContext.Response.Headers.Add("x-segment-duration", duration.ToString());
+            HttpContext.Response.Headers.Add("x-segment-max", maxSequence.ToString());
+
+            return PhysicalFile(filefullpath, "video/webm", filename, enableRangeProcessing: true);
         }
 
+        ////[HttpHead]
+        //////[Route("{resource}")]
+        ////public System.Web.Http.IHttpActionResult Head(string resource)
+        ////{
+        ////    //  Get resource info here
+
+        ////    var resourceType = "application/json";
+        ////    var resourceLength = 1024;
+
+        ////    return new Head(resourceType, resourceLength);
+        ////}
+
+
+
     }
+
 }

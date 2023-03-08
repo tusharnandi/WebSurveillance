@@ -5,36 +5,43 @@
 <style>
 	#st-video {
 	  position: relative;
-	  width: 100%;
-	  height: 100%;
+	  width: 70%;
+	  height: 70%;
 	}
-    #snd-video {
-	  position: relative;
-	  width: 100%;
-	  height: 100%;
-	}
+
 </style>
 <div>Work in progress...</div>
-<video id="st-video" playsinline controls></video>
+
+ <div class="row">
+	<div class="col-8 border border-dark" style="height: 85vh;">
+			<video id="st-video" playsinline autoplay controls></video>
+        </div>
+
+        <div class="col-3" style="height: 85vh;">
+		<div class="border border-dark">
+			<button class="btn btn-info logclean">Clear Log</button>
+        </div>
+		<div class="border border-info">
+			<div class="log overflow-auto" style="max-height: 400px;"></div>
+		</div>  
+        </div>
+    </div>
     <script>
 
         const mediaPlayer = document.querySelector("#st-video");
-        const assetURL ="sample.webm"; //"Recording-1.webm"; // "sample.webm";
+        let seq=0;
+        const assetURL ="https://localhost:7031/api/StreamReader/file/"; //"Recording-1.webm"; // "sample.webm";
         const mimeCodec = 'video/webm; codecs="vp9"';
 
-        var totalSegments = 100;
-        var segmentLength = 0;
-        var segmentDuration = 0;
-        var bytesFetched = 0;
-        var requestedSegments = [];
 
-        for (var i = 0; i < totalSegments; ++i) requestedSegments[i] = false;
+        var segmentLength = 0;     // content-length in bytes ... get from backend
+        var segmentDuration = 0;   // total duration in second ... get from backend each segment x-segment-duration 
+        var segmentTotal=0;        // total segment available ....get from backend x-segment-max
 
         var mediaSource = null;
         if ('MediaSource' in window && MediaSource.isTypeSupported(mimeCodec)) 
         {
             mediaSource = new MediaSource;
-            //console.log(mediaSource.readyState); // closed
             mediaPlayer.src = URL.createObjectURL(mediaSource);
             mediaSource.addEventListener('sourceopen', sourceOpen);
         }
@@ -47,91 +54,83 @@
         {
             sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
         
-            getFileLength(assetURL, function (fileLength) 
-            {
-                console.log("Content Length: "+ fileLength);
-                console.log((fileLength / 1024 / 1024).toFixed(2), 'MB');
-                //totalLength = fileLength;
-                segmentLength = Math.round(fileLength / totalSegments);
+            // Set first sequence
+            seq=1;
+            
+            fetchRange(assetURL+seq, appendSegment);
 
-                console.log(`segmentLength:${segmentLength}`);
+            mediaSource.duration = +Infinity;
+
+            mediaPlayer.addEventListener('timeupdate', checkBuffer);
           
-                //mediaPlayer.duration=60;  //TKN Hardcoded Duration
-
-                //mediaSource.duration = +Infinity;
-
-                fetchRange(assetURL, 0, segmentLength, appendSegment);
-                
-                requestedSegments[0] = true;
-          
-                
-                mediaPlayer.addEventListener('timeupdate', checkBuffer);
-          
-                mediaPlayer.addEventListener('canplay', function (){
-
-                    segmentDuration = mediaPlayer.duration / totalSegments;
-
-                    console.log(`canplay: mediaPlayer.duration: ${mediaPlayer.duration}, totalSegments: ${totalSegments}, segmentDuration: ${segmentDuration}`);
-                    mediaPlayer.play();
-                });
-                
-                mediaPlayer.addEventListener('seeking', seek);
+            mediaPlayer.addEventListener('canplay', function (){
+                log(`canplay: segmentDuration: ${segmentDuration}, segmentLength:${segmentLength}`);
+                mediaPlayer.play();
             });
+                
+            //mediaPlayer.addEventListener('seeking', seek);
         };
 
-        function getFileLength (url, cb) {
-        var xhr = new XMLHttpRequest;
-        xhr.open('head', url);
-        xhr.onload = function () {
-            cb(xhr.getResponseHeader('content-length'));
-            };
-        xhr.send();
-        };
+        //function getFileLength (url, cb) {
+        //    log(`getFileLength: ${url}`);
+        //    var xhr = new XMLHttpRequest;
+        //    xhr.open('head', url);
+        //    xhr.onload = function () {          
+        //        cb(xhr.getResponseHeader('content-length'));
+        //    };
+        //    xhr.send();
+        //};
 
-        function fetchRange (url, start, end, cb) {
+        function fetchRange (url,cb) {
+
+            log(`fetchRange: ${url}`);
+
             var xhr = new XMLHttpRequest;
             xhr.open('get', url);
             xhr.responseType = 'arraybuffer';
-            xhr.setRequestHeader('Range', 'bytes=' + start + '-' + end);
+            //xhr.setRequestHeader('Range', 'bytes=' + start + '-' + end);
             xhr.onload = function () {
-                console.log('fetched bytes: ', start, end);
-                bytesFetched += end - start + 1;
+                var curentFetchByte=xhr.getResponseHeader('content-length');
+                var  duration=xhr.getResponseHeader('x-segment-duration');
+                var  maxSegment = xhr.getResponseHeader('x-segment-max');
+                
+                segmentLength += parseInt(curentFetchByte);
+                segmentDuration += parseInt(duration);
+
+                if(maxSegment>segmentTotal){
+                    segmentTotal = parseInt(maxSegment); 
+                    log(`updated segmentTotal : ${segmentTotal}`);
+                }
+                    
+
+                log(`fetched: ${curentFetchByte} bytes, updated segment: (length:${segmentLength}, duration:${segmentDuration})`);
+                
                 cb(xhr.response);
             };
             xhr.send();
         };
 
         function appendSegment (chunk) {
-
-        //const blobSize=JSON.stringify(chunk).length;
-
-        //const blob = new Blob(chunk, { type: "video/webm", size: blobSize  }); // the blob
-
-        sourceBuffer.appendBuffer(chunk);
-
-        //Set to Another Video 
-        //console.log("Playing into Another Video Tag.!!!!");
-
-        //let videoUrl2= URL.createObjectURL(chunk); // the blob
-        //mediaPlayer2.src= videoUrl2;
+            sourceBuffer.appendBuffer(chunk);
         };
 
         function checkBuffer (_) {
-        var currentSegment = getCurrentSegment();
+            var currentSegment = getCurrentSegment();
 
-        if (currentSegment === totalSegments && haveAllSegments()) 
-        {
-            console.log('last segment', mediaSource.readyState);
-            mediaSource.endOfStream();
-            mediaPlayer.removeEventListener('timeupdate', checkBuffer);
-        } 
-        else if (shouldFetchNextSegment(currentSegment)) 
-        {
-            requestedSegments[currentSegment] = true;
-            console.log('time to fetch next chunk', mediaPlayer.currentTime);
-            fetchRange(assetURL, bytesFetched, bytesFetched + segmentLength, appendSegment);
-        }
-        //console.log(video.currentTime, currentSegment, segmentDuration);
+            if (seq>=segmentTotal)
+            { 
+                log(`last segment loaded.`);
+
+                mediaSource.endOfStream();
+                mediaPlayer.removeEventListener('timeupdate', checkBuffer);
+            } 
+            else if (shouldFetchNextSegment(currentSegment)) 
+            {
+                 seq++;
+                log(`fetch next chunk Seq: ${seq}, ${mediaPlayer.currentTime}`);
+
+                fetchRange(assetURL+seq, appendSegment);
+            }
         };
 
         function seek (e) {
@@ -149,13 +148,38 @@
             return ((mediaPlayer.currentTime / segmentDuration) | 0) + 1;
         };
 
-        function haveAllSegments () {
-            return requestedSegments.every(function (val) { return !!val; });
-        };
-
         function shouldFetchNextSegment (currentSegment) 
         {
-            return mediaPlayer.currentTime > segmentDuration * currentSegment * 0.8 &&
-                !requestedSegments[currentSegment];
+            return mediaPlayer.currentTime > segmentDuration * currentSegment * 0.8;
         };
+
+            //Basic
+    $(".logclean").click(function () {
+
+        $(".log").empty();
+
+    });
+
+    function log(message, id = 0) {
+        if (id > 0) {
+
+            //clear log for each 100 request
+            if (!(id % 50)) {
+                $(".log").empty();
+            }
+
+            if ($(".log").find(`#${id}`).length) {
+                $(".log").find(`#${id}`).text(message);
+            }
+            else {
+                $(".log").append(`<div id="${id}">${message}</div>`);
+            }
+
+        }
+        else {
+            $(".log").append(`<div>${message}</div>`);
+        }
+
+    }
+
     </script>

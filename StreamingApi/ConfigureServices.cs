@@ -16,9 +16,11 @@ namespace VideoStreamApi
             services.AddCors(o => o.AddPolicy(MyAllowSpecificOrigins,
                       builder =>
                       {
-                          builder.WithOrigins(allowOrigins)
+                          builder.AllowAnyOrigin()
                           .AllowAnyMethod()
-                          .AllowAnyHeader();
+                          .AllowAnyHeader()
+                          .WithExposedHeaders("x-segment-duration")
+                          .WithExposedHeaders("x-segment-max");
                       }));
             //builder.AllowAnyOrigin()
             //builder.WithOrigins(allowOrigins)

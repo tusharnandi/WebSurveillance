@@ -94,7 +94,7 @@ public static class StreamRequestHandler
         {
             //hashValue = ComputeHash(buffer, type);
             output.Write(buffer, 0, len);
-            Console.WriteLine($"Written {len} bytes and hashValue {hashValue}.");
+            //Console.WriteLine($"Written {len} bytes and hashValue {hashValue}.");
         }
         return hashValue;
 

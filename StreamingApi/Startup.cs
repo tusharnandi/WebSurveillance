@@ -82,6 +82,22 @@ namespace VideoStreamApi
 
                         Console.WriteLine($"{DateTime.Now} -{attempt}-seq:{seq}- Processing completed");
 
+                        if ((seq % 30) == 0)
+                        {
+                            int r = (seq / 30);
+
+                            string destfile2 = Path.Combine(FileLocation, $"Recording-{r}.webm");
+
+                            await StreamRequestHandler.SaveToFile(tempfile, destfile2);
+
+                            Console.WriteLine($"Saving to {destfile2} - completed");
+
+                            var fs = new FileStream(tempfile, FileMode.Truncate);
+                            fs.Close();
+                            //File.Delete(tempfile);
+                        }
+
+                        /*
                         if (isLast)
                         {
                             //destfile = string.IsNullOrEmpty(rcName) ? destfile : Path.Combine(FileLocation, $"{rcName}.webm");
@@ -90,7 +106,7 @@ namespace VideoStreamApi
 
                             Console.WriteLine($"{DateTime.Now} -{attempt}-dest:{destfile}- Save completed");
                             File.Delete(tempfile);
-                        }
+                        }*/
                     }
                     catch (Exception ex)
                     {
