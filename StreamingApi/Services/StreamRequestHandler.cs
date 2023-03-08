@@ -92,7 +92,7 @@ public static class StreamRequestHandler
         int len;
         while ((len = await input.ReadAsync(buffer, 0, buffer.Length)) > 0)
         {
-            hashValue = ComputeHash(buffer, type);
+            //hashValue = ComputeHash(buffer, type);
             output.Write(buffer, 0, len);
             Console.WriteLine($"Written {len} bytes and hashValue {hashValue}.");
         }
